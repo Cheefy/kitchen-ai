@@ -1,32 +1,18 @@
 services:
-  # Postgres is NOT a service here -- it runs as its own standalone Unraid
-  # Community Applications container (postgres:18), published on host port
-  # 5433 (5432 is already taken by the existing paperless-ai Postgres).
-  # `backend` reaches it over the LAN via DATABASE_URL in .env, not via
-  # Compose-internal DNS, since it's outside this project's network.
+  # Postgres and llama.cpp are NOT services here -- both run as standalone
+  # Unraid Community Applications containers, not inside this Compose stack:
+  #   - postgres:18, published on host port 5433 (5432 already taken by
+  #     the existing paperless-ai Postgres)
+  #   - ghcr.io/ggml-org/llama.cpp:server-vulkan, published on host port
+  #     8081, GPU-passthrough'd to the Arc Pro B70 via /dev/dri
+  # `backend` reaches both over the LAN via env vars in .env, not via
+  # Compose-internal DNS, since they're outside this project's network.
   # See kitchen_ai_spec.md §2.
-
-  ollama:
-    image: ollama/ollama:latest
-    restart: unless-stopped
-    volumes:
-      - ollama_data:/root/.ollama
-    # GPU passthrough requires the Unraid Nvidia-Driver plugin on the host
-    # and the block below uncommented once that's set up:
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: all
-    #           capabilities: [gpu]
 
   backend:
     build: ./backend
     restart: unless-stopped
     env_file: .env
     ports:
-      - "8000:8000"
-
-volumes:
-  ollama_data:
+      # Host 8000 is already claimed by PortainerCE on this box.
+      - "8001:8000"
