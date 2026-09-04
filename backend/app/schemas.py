@@ -153,6 +153,10 @@ class RecipeMacros(BaseModel):
     ingredients: list[RecipeIngredientMacroLine]
 
 
+class NotificationTestRequest(BaseModel):
+    message: str = "Test notification from Kitchen AI"
+
+
 class DownscaleSuggestion(BaseModel):
     recipe_id: int
     sample_size: int
