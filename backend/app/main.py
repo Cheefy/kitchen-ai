@@ -1,12 +1,9 @@
-import os
-
 from fastapi import FastAPI
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import create_async_engine
+
+from app.database import engine
 
 app = FastAPI(title="Kitchen AI")
-
-engine = create_async_engine(os.environ["DATABASE_URL"])
 
 
 @app.get("/health")
