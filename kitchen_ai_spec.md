@@ -93,6 +93,7 @@ New shortcuts beyond what's listed above only get added later, after real fricti
 - **`recipe_ingredients`** — join table, `recipe_id`, **`category_id`** (generic, not a specific `ingredient_id` — resolved to a specific product at cook time), `quantity`, `unit`.
 - **`recipe_cookware`** — `recipe_id`, `cookware_id`, `required` (bool).
 - **`recipe_versions`** — `id`, `recipe_id`, `version_number`, `changed_at`, full snapshot (not a diff) of ingredients + instructions at that point. A permanent edit writes the pre-change snapshot here before mutating the live recipe. Reverting restores an old snapshot as current and logs the revert as a new version entry (history never has silent gaps).
+- **`cooking_sessions`** — the "one canonical current session" §1 describes conceptually but never gave a concrete table. `id`, `recipe_id`, `status` (`active`/`finished`), `started_at`, `ended_at`, `ingredient_overrides` (JSONB, sparse `{recipe_ingredient_id: quantity}` map for this-time-only edits, §6), `servings_override`. A partial unique index allows at most one `active` row at a time, matching the single-session model.
 
 ### Shopping & meal prep
 - **`shopping_list`** — `id`, `ingredient_id` (or category — TBD at build time), `quantity_needed`, `date_added`. No status field — added only on explicit "yes," removed only when the corresponding purchase is logged during a post-haul inventory pass (barcode scan matching an item on the list clears it automatically).

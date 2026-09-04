@@ -10,6 +10,7 @@ from app.routers import (
     meal_log,
     recipes,
     recommendations,
+    sessions,
     shopping_list,
     system_log,
     tracking,
@@ -27,6 +28,7 @@ app.include_router(behavior_settings.router)
 app.include_router(system_log.router)
 app.include_router(tracking.router)
 app.include_router(recommendations.router)
+app.include_router(sessions.router)
 
 
 @app.get("/health")

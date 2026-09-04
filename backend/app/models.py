@@ -166,6 +166,26 @@ class RecipeVersion(Base):
     snapshot: Mapped[dict] = mapped_column(JSONB, nullable=False)
 
 
+class CookingSession(Base):
+    """The "one canonical current session" described in spec §1 -- never
+    given a concrete table there. Added while building §6/§7's editing and
+    session-lifecycle behavior, which both assume this exists. At most one
+    row has status='active' at a time (enforced by a partial unique index,
+    migration 0004), matching the single-session model §1 describes."""
+
+    __tablename__ = "cooking_sessions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    recipe_id: Mapped[int] = mapped_column(ForeignKey("recipes.id"), nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False, default="active")  # active | finished
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # This-time-only edits (§6) -- sparse {recipe_ingredient_id: quantity}
+    # override map, cleared once committed permanent.
+    ingredient_overrides: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    servings_override: Mapped[Decimal | None] = mapped_column(Numeric)
+
+
 # --- Shopping & meal prep ------------------------------------------------------
 
 

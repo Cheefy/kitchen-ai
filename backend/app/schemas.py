@@ -153,6 +153,64 @@ class RecipeMacros(BaseModel):
     ingredients: list[RecipeIngredientMacroLine]
 
 
+class SessionStart(BaseModel):
+    recipe_id: int
+
+
+class EffectiveIngredientRead(BaseModel):
+    recipe_ingredient_id: int
+    category_id: int
+    quantity: Decimal
+    unit: str
+
+
+class SessionRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    recipe_id: int
+    status: str
+    started_at: datetime
+    ended_at: datetime | None
+    servings_override: Decimal | None
+    ingredients: list[EffectiveIngredientRead]
+    macros: RecipeMacros
+
+
+class DeltaEditRequest(BaseModel):
+    amount: Decimal  # signed -- negative for "less"
+
+
+class AbsoluteEditRequest(BaseModel):
+    quantity: Decimal
+
+
+class RecipeScaleRequest(BaseModel):
+    """Provide exactly one of target_servings or
+    (target_recipe_ingredient_id + target_quantity). Scaling by an
+    ingredient quantity requires more_servings -- per spec §6 this
+    genuinely can't be inferred, so it's a required field rather than a
+    default; omitting it represents the "must ask" case as a 422."""
+
+    target_servings: Decimal | None = None
+    target_recipe_ingredient_id: int | None = None
+    target_quantity: Decimal | None = None
+    more_servings: bool | None = None
+
+
+class RevertRequest(BaseModel):
+    mode: str  # "discard_session_edits" | "restore_version"
+    version_id: int | None = None
+
+
+class RecipeVersionRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    recipe_id: int
+    version_number: int
+    changed_at: datetime
+    snapshot: dict
+
+
 class RecipeCandidate(BaseModel):
     recipe_id: int
     name: str
