@@ -289,6 +289,7 @@ Architecture notes, not yet implemented:
 - For compound-sounding input, consider a two-stage pipeline: a cheap first pass splits the utterance into clean single-intent sub-commands, each handled normally from there.
 - Misparsed compound commands caught in `system_log` (§3) feed back in as few-shot examples in the near term, and potentially a small LoRA fine-tune on the local model longer-term (feasible given the hardware already purchased).
 - **Before committing to a specific Ollama model** (Qwen3 is the leading candidate): benchmark a written test set of realistic compound phrasings against it and any competitive alternative available at build time. "Good at tool-calling generally" doesn't guarantee "good at this project's specific phrasing patterns." Feeds directly into the open Ollama model-choice item, §14.
+- **Response streaming to TTS**: the LLM's output is chunked (word/phrase/sentence, configurable — sentence-level by default) and handed to TTS per chunk as it's ready, rather than waiting for the full response — cuts perceived latency on longer or compound replies. Sentence-level chunking works today with Piper as already planned (§1) — just repeated calls, no different TTS engine needed. Only revisit the TTS engine choice if a specific limitation shows up trying to go finer-grained (word-level) with Piper.
 
 ---
 
