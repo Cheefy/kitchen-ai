@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict
@@ -151,3 +151,45 @@ class RecipeMacros(BaseModel):
     fully_resolved: bool
     totals: dict[str, Decimal]
     ingredients: list[RecipeIngredientMacroLine]
+
+
+class MealLogFromRecipe(BaseModel):
+    servings: Decimal = Decimal("1")
+
+
+class MealLogFromIngredient(BaseModel):
+    ingredient_id: int
+    quantity: Decimal
+    unit: str
+
+
+class MealLogEstimate(BaseModel):
+    description: str
+    calories: Decimal | None = None
+    protein_g: Decimal | None = None
+    carbs_g: Decimal | None = None
+    fat_g: Decimal | None = None
+
+
+class MealLogUpdate(BaseModel):
+    """Simple field edits only. The full is_estimate-toggle-driven
+    promote/propagate-to-ingredients behavior from spec §7 is more involved
+    (reverse-scaling macros onto a per-serving basis) and is deferred to
+    its own pass rather than half-implemented here."""
+
+    macros: dict[str, Decimal] | None = None
+    quantity: Decimal | None = None
+    is_estimate: bool | None = None
+
+
+class MealLogRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    timestamp: datetime
+    recipe_id: int | None
+    meal_prep_batch_id: int | None
+    ingredient_id: int | None
+    quantity: Decimal | None
+    description: str | None
+    macros: dict
+    is_estimate: bool

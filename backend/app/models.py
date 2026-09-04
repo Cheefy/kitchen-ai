@@ -207,6 +207,10 @@ class MealLog(Base):
     quantity: Mapped[Decimal | None] = mapped_column(Numeric)
     macros: Mapped[dict] = mapped_column(JSONB, nullable=False)
     is_estimate: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Not in the original spec's field list -- added because an ad-hoc
+    # estimate with no recipe/batch/ingredient link otherwise has no way to
+    # record what was actually eaten.
+    description: Mapped[str | None] = mapped_column(String)
 
 
 class PlannedMeal(Base):
