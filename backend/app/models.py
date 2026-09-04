@@ -269,3 +269,22 @@ class RecommendationSettings(Base):
     fat_adherence: Mapped[Decimal] = mapped_column(Numeric, nullable=False, default=20)
     diversity: Mapped[Decimal] = mapped_column(Numeric, nullable=False, default=50)
     expiration_urgency: Mapped[Decimal] = mapped_column(Numeric, nullable=False, default=50)
+    # Named as settings in spec §8 but never given columns there -- added
+    # while building the recommendation engine, which needs them.
+    enabled_meal_slots: Mapped[list] = mapped_column(
+        JSONB, nullable=False, default=lambda: ["lunch", "dinner", "treat"]
+    )
+    typical_delivery_lead_hours: Mapped[int] = mapped_column(nullable=False, default=5)
+    ingredient_coverage_threshold: Mapped[Decimal] = mapped_column(
+        Numeric, nullable=False, default=50
+    )
+
+
+class UserAllergenRestriction(Base):
+    """Permanent allergen exclusions (kitchen_ai_spec.md §8's "permanent
+    default"). Not listed as a table in §3 -- another gap found while
+    building the recommendation engine, which assumes this data exists."""
+
+    __tablename__ = "user_allergen_restrictions"
+
+    allergen_id: Mapped[int] = mapped_column(ForeignKey("allergens.id"), primary_key=True)

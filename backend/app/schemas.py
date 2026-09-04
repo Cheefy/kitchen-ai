@@ -153,6 +153,38 @@ class RecipeMacros(BaseModel):
     ingredients: list[RecipeIngredientMacroLine]
 
 
+class RecipeCandidate(BaseModel):
+    recipe_id: int
+    name: str
+    macros: dict[str, Decimal]
+    ingredient_ids: list[int]
+
+
+class ExcludedRecipe(BaseModel):
+    recipe_id: int
+    name: str
+    reason: str
+    missing_cookware_ids: list[int] | None = None
+    detail: list[dict] | None = None
+
+
+class ExpiringUnusedIngredient(BaseModel):
+    inventory_id: int
+    ingredient_id: int
+    expiration_date: date
+
+
+class Recommendations(BaseModel):
+    full_stock: list[RecipeCandidate]
+    shopping_required: list[RecipeCandidate]
+    excluded: list[ExcludedRecipe]
+    expiring_unused_ingredients: list[ExpiringUnusedIngredient]
+
+
+class AllergenRestrictionCreate(BaseModel):
+    allergen_id: int
+
+
 class WeighInCreate(BaseModel):
     date: date
     weight: Decimal
