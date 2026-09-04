@@ -78,3 +78,76 @@ class InventoryItemRead(BaseModel):
     unit: str
     expiration_date: date | None
     location: str | None
+
+
+class CookwareCreate(BaseModel):
+    name: str
+    type: str | None = None
+    tare_weight: Decimal | None = None
+    label_number: str | None = None
+
+
+class CookwareRead(CookwareCreate):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+
+
+class RecipeIngredientIn(BaseModel):
+    category_id: int
+    quantity: Decimal
+    unit: str
+
+
+class RecipeIngredientRead(RecipeIngredientIn):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+
+
+class RecipeCookwareIn(BaseModel):
+    cookware_id: int
+    required: bool = True
+
+
+class RecipeCookwareRead(RecipeCookwareIn):
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RecipeCreate(BaseModel):
+    name: str
+    instructions: str | None = None
+    base_servings: Decimal
+    prep_minutes: int | None = None
+    active_minutes: int | None = None
+    passive_minutes: int | None = None
+    ingredients: list[RecipeIngredientIn] = []
+    cookware: list[RecipeCookwareIn] = []
+
+
+class RecipeRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    instructions: str | None
+    base_servings: Decimal
+    prep_minutes: int | None
+    active_minutes: int | None
+    passive_minutes: int | None
+    ingredients: list[RecipeIngredientRead]
+    cookware_requirements: list[RecipeCookwareRead]
+
+
+class RecipeIngredientMacroLine(BaseModel):
+    recipe_ingredient_id: int
+    category_id: int
+    resolution: str
+    ingredient_id: int | None = None
+    ingredient_name: str | None = None
+    candidate_ingredient_ids: list[int] | None = None
+    error: str | None = None
+    scale: Decimal | None = None
+
+
+class RecipeMacros(BaseModel):
+    fully_resolved: bool
+    totals: dict[str, Decimal]
+    ingredients: list[RecipeIngredientMacroLine]

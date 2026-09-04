@@ -5,7 +5,7 @@ from decimal import Decimal
 
 from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
@@ -128,6 +128,12 @@ class Recipe(Base):
     prep_minutes: Mapped[int | None] = mapped_column()
     active_minutes: Mapped[int | None] = mapped_column()
     passive_minutes: Mapped[int | None] = mapped_column()
+    ingredients: Mapped[list["RecipeIngredient"]] = relationship(
+        back_populates="recipe", cascade="all, delete-orphan"
+    )
+    cookware_requirements: Mapped[list["RecipeCookware"]] = relationship(
+        back_populates="recipe", cascade="all, delete-orphan"
+    )
 
 
 class RecipeIngredient(Base):
@@ -138,6 +144,7 @@ class RecipeIngredient(Base):
     category_id: Mapped[int] = mapped_column(ForeignKey("ingredient_categories.id"), nullable=False)
     quantity: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
     unit: Mapped[str] = mapped_column(ForeignKey("units.code"), nullable=False)
+    recipe: Mapped["Recipe"] = relationship(back_populates="ingredients")
 
 
 class RecipeCookware(Base):
@@ -146,6 +153,7 @@ class RecipeCookware(Base):
     recipe_id: Mapped[int] = mapped_column(ForeignKey("recipes.id"), primary_key=True)
     cookware_id: Mapped[int] = mapped_column(ForeignKey("cookware.id"), primary_key=True)
     required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    recipe: Mapped["Recipe"] = relationship(back_populates="cookware_requirements")
 
 
 class RecipeVersion(Base):
