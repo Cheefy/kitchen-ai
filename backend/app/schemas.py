@@ -182,6 +182,41 @@ class MealLogUpdate(BaseModel):
     is_estimate: bool | None = None
 
 
+class ShoppingListItemCreate(BaseModel):
+    ingredient_id: int | None = None
+    category_id: int | None = None
+    quantity_needed: Decimal
+
+
+class ShoppingListItemRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    ingredient_id: int | None
+    category_id: int | None
+    quantity_needed: Decimal
+    date_added: datetime
+
+
+class BehaviorSettingUpsert(BaseModel):
+    mode: str  # "assume_and_announce" | "always_ask"
+
+
+class BehaviorSettingRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    key: str
+    mode: str
+
+
+class SystemLogRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    timestamp: datetime
+    description: str
+    trigger: str | None
+    corrected: bool
+    behavior_key: str | None
+
+
 class MealLogRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
