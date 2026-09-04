@@ -153,6 +153,83 @@ class RecipeMacros(BaseModel):
     ingredients: list[RecipeIngredientMacroLine]
 
 
+class WeighInCreate(BaseModel):
+    date: date
+    weight: Decimal
+
+
+class WeighInRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    date: date
+    weight: Decimal
+
+
+class UserGoalCreate(BaseModel):
+    effective_date: date
+    goal_type: str | None = None
+    protein_g: Decimal | None = None
+    fat_g: Decimal | None = None
+    carbs_g: Decimal | None = None
+    goal_weight: Decimal
+    target_deficit_surplus: Decimal | None = None
+    target_date: date | None = None
+
+
+class UserGoalRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    effective_date: date
+    goal_type: str | None
+    target_deficit_surplus: Decimal | None
+    protein_g: Decimal | None
+    fat_g: Decimal | None
+    carbs_g: Decimal | None
+    goal_weight: Decimal | None
+    target_date: date | None
+
+
+class RecommendationSettingsUpdate(BaseModel):
+    calorie_deficit_adherence: Decimal | None = None
+    protein_adherence: Decimal | None = None
+    carb_adherence: Decimal | None = None
+    fat_adherence: Decimal | None = None
+    diversity: Decimal | None = None
+    expiration_urgency: Decimal | None = None
+
+
+class RecommendationSettingsRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    calorie_deficit_adherence: Decimal
+    protein_adherence: Decimal
+    carb_adherence: Decimal
+    fat_adherence: Decimal
+    diversity: Decimal
+    expiration_urgency: Decimal
+
+
+class PlannedMealCreate(BaseModel):
+    meal_slot: str
+    description: str | None = None
+    estimated_calories: Decimal | None = None
+    estimated_protein_g: Decimal | None = None
+    estimated_carbs_g: Decimal | None = None
+    estimated_fat_g: Decimal | None = None
+
+
+class PlannedMealRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    date: date
+    meal_slot: str
+    description: str | None
+    estimated_calories: Decimal | None
+    estimated_protein_g: Decimal | None
+    estimated_carbs_g: Decimal | None
+    estimated_fat_g: Decimal | None
+
+
 class MealLogFromRecipe(BaseModel):
     servings: Decimal = Decimal("1")
 

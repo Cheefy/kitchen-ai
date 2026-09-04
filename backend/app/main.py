@@ -11,6 +11,7 @@ from app.routers import (
     recipes,
     shopping_list,
     system_log,
+    tracking,
 )
 
 app = FastAPI(title="Kitchen AI")
@@ -23,6 +24,7 @@ app.include_router(meal_log.router)
 app.include_router(shopping_list.router)
 app.include_router(behavior_settings.router)
 app.include_router(system_log.router)
+app.include_router(tracking.router)
 
 
 @app.get("/health")
