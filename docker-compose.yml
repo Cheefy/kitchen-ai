@@ -1,22 +1,10 @@
 services:
-  postgres:
-    image: postgres:16
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    # Not published to the host by default — see §2 of the design spec.
-    # Uncomment for local debugging with a DB client:
-    # ports:
-    #   - "5432:5432"
+  # Postgres is NOT a service here -- it runs as its own standalone Unraid
+  # Community Applications container (postgres:18), published on host port
+  # 5433 (5432 is already taken by the existing paperless-ai Postgres).
+  # `backend` reaches it over the LAN via DATABASE_URL in .env, not via
+  # Compose-internal DNS, since it's outside this project's network.
+  # See kitchen_ai_spec.md §2.
 
   ollama:
     image: ollama/ollama:latest
@@ -37,12 +25,8 @@ services:
     build: ./backend
     restart: unless-stopped
     env_file: .env
-    depends_on:
-      postgres:
-        condition: service_healthy
     ports:
       - "8000:8000"
 
 volumes:
-  postgres_data:
   ollama_data:
