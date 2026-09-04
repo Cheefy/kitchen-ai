@@ -15,6 +15,12 @@ from app.services.units import ConversionNeedsInput, convert_to_canonical, to_in
 MACRO_FIELDS = ["calories", "protein_g", "carbs_g", "fat_g"]
 
 
+def floatify_macros(macros: dict) -> dict:
+    """JSONB columns serialize via plain json.dumps, which chokes on
+    Decimal -- convert before writing anywhere macros get stored."""
+    return {k: float(v) for k, v in macros.items() if v is not None}
+
+
 async def compute_recipe_macros(
     session: AsyncSession, recipe_ingredients: list[RecipeIngredient]
 ) -> dict:

@@ -320,6 +320,42 @@ class PlannedMealRead(BaseModel):
     estimated_fat_g: Decimal | None
 
 
+class DeductionLine(BaseModel):
+    ingredient_id: int
+    ingredient_name: str
+    deducted: Decimal
+    unit: str
+
+
+class MealPrepBatchRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    recipe_id: int
+    description: str | None
+    date_prepared: datetime
+    units_total: Decimal
+    units_remaining: Decimal
+    macros_per_unit: dict
+
+
+class FinishCookingRequest(BaseModel):
+    """kitchen_ai_spec.md §7 -- "deduct the ingredients and count as eaten"
+    is a compound command; deduct_and_eaten does both as separable actions
+    from one call. percent_eaten defaults to 100 -- "I'm finished cooking"
+    alone defaults to the whole recipe eaten, stated, correctable after."""
+
+    mode: str  # "deduct_only" | "deduct_and_eaten"
+    percent_eaten: Decimal = Decimal("100")
+
+
+class EatBatchRequest(BaseModel):
+    percent: Decimal = Decimal("100")
+
+
+class DisposeBatchRequest(BaseModel):
+    percent: Decimal = Decimal("100")
+
+
 class MealLogFromRecipe(BaseModel):
     servings: Decimal = Decimal("1")
 
@@ -395,3 +431,9 @@ class MealLogRead(BaseModel):
     description: str | None
     macros: dict
     is_estimate: bool
+
+
+class FinishCookingResult(BaseModel):
+    batch: MealPrepBatchRead
+    deductions: list[DeductionLine]
+    meal_log_entry: MealLogRead | None = None

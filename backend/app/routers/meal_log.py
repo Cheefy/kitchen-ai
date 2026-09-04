@@ -6,16 +6,12 @@ from sqlalchemy.orm import selectinload
 from app import schemas
 from app.database import get_session
 from app.models import Ingredient, MealLog, Recipe, Unit
-from app.services.macros import compute_recipe_macros
+from app.services.macros import compute_recipe_macros, floatify_macros
 from app.services.units import ConversionNeedsInput, convert_to_canonical, to_ingredient_basis
 
 router = APIRouter()
 
 MACRO_FIELDS = ("calories", "protein_g", "carbs_g", "fat_g")
-
-
-def _floatify(macros: dict) -> dict:
-    return {k: float(v) for k, v in macros.items() if v is not None}
 
 
 @router.post("/meal-log/from-recipe/{recipe_id}", response_model=schemas.MealLogRead)
@@ -47,7 +43,7 @@ async def log_recipe_eaten(
     entry = MealLog(
         recipe_id=recipe_id,
         quantity=body.servings,
-        macros=_floatify(scaled),
+        macros=floatify_macros(scaled),
         is_estimate=False,
     )
     session.add(entry)
@@ -96,7 +92,7 @@ async def log_ingredient_eaten(
     entry = MealLog(
         ingredient_id=body.ingredient_id,
         quantity=body.quantity,
-        macros=_floatify(macros),
+        macros=floatify_macros(macros),
         is_estimate=(ingredient.source == "estimate"),
     )
     session.add(entry)
@@ -113,7 +109,7 @@ async def log_estimate(
     No permanent `ingredients` row is created."""
     macros = {f: getattr(body, f) for f in MACRO_FIELDS if getattr(body, f) is not None}
     entry = MealLog(
-        description=body.description, macros=_floatify(macros), is_estimate=True
+        description=body.description, macros=floatify_macros(macros), is_estimate=True
     )
     session.add(entry)
     await session.commit()
@@ -137,7 +133,7 @@ async def update_meal_log(
 
     for field, value in body.model_dump(exclude_unset=True).items():
         if field == "macros" and value is not None:
-            setattr(entry, field, _floatify(value))
+            setattr(entry, field, floatify_macros(value))
         else:
             setattr(entry, field, value)
 
