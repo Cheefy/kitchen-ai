@@ -2,8 +2,12 @@ from fastapi import FastAPI
 from sqlalchemy import text
 
 from app.database import engine
+from app.routers import ingredients, inventory
 
 app = FastAPI(title="Kitchen AI")
+
+app.include_router(ingredients.router)
+app.include_router(inventory.router)
 
 
 @app.get("/health")
