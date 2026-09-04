@@ -153,6 +153,13 @@ class RecipeMacros(BaseModel):
     ingredients: list[RecipeIngredientMacroLine]
 
 
+class DownscaleSuggestion(BaseModel):
+    recipe_id: int
+    sample_size: int
+    average_eaten_fraction: Decimal
+    suggested_scale_factor: Decimal
+
+
 class SessionStart(BaseModel):
     recipe_id: int
 

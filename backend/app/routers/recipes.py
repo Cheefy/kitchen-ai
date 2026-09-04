@@ -13,6 +13,7 @@ from app.models import (
     RecipeIngredient,
     RecipeVersion,
 )
+from app.services.downscale import check_downscale_suggestion
 from app.services.macros import compute_recipe_macros
 
 router = APIRouter()
@@ -112,3 +113,17 @@ async def get_recipe_macros(recipe_id: int, session: AsyncSession = Depends(get_
     if recipe is None:
         raise HTTPException(status_code=404, detail="recipe not found")
     return await compute_recipe_macros(session, recipe.ingredients)
+
+
+@router.get(
+    "/recipes/{recipe_id}/downscale-suggestion",
+    response_model=schemas.DownscaleSuggestion | None,
+)
+async def get_downscale_suggestion(recipe_id: int, session: AsyncSession = Depends(get_session)):
+    """kitchen_ai_spec.md §3 -- a consistent under-consumption pattern
+    across recent fully-resolved meal_prep_batches suggests permanently
+    scaling the recipe down. Returns null when no pattern is found (or the
+    behavior_settings toggle for this is disabled)."""
+    if await session.get(Recipe, recipe_id) is None:
+        raise HTTPException(status_code=404, detail="recipe not found")
+    return await check_downscale_suggestion(session, recipe_id)
