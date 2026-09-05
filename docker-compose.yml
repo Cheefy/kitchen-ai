@@ -10,7 +10,11 @@ services:
   # See kitchen_ai_spec.md §2.
 
   backend:
-    build: ./backend
+    build:
+      # Context is the repo root (not ./backend) so the Dockerfile can also
+      # COPY the frontend/ directory, which lives alongside backend/.
+      context: .
+      dockerfile: backend/Dockerfile
     restart: unless-stopped
     env_file: .env
     ports:
