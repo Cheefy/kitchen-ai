@@ -16,3 +16,10 @@ services:
     ports:
       # Host 8000 is already claimed by PortainerCE on this box.
       - "8001:8000"
+    volumes:
+      # Garmin session tokens (§9) -- must persist across rebuilds, or
+      # every deploy would need a fresh interactive login.
+      - garmin_tokens:/data/garmin_tokens
+
+volumes:
+  garmin_tokens:

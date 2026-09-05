@@ -5,6 +5,7 @@ from app.database import engine
 from app.routers import (
     behavior_settings,
     cookware,
+    garmin,
     ingredients,
     inventory,
     meal_log,
@@ -33,6 +34,7 @@ app.include_router(recommendations.router)
 app.include_router(sessions.router)
 app.include_router(meal_prep_batches.router)
 app.include_router(notifications.router)
+app.include_router(garmin.router)
 
 
 @app.get("/health")

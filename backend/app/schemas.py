@@ -153,6 +153,23 @@ class RecipeMacros(BaseModel):
     ingredients: list[RecipeIngredientMacroLine]
 
 
+class ActivityLogRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    date: date
+    activity_type: str | None
+    duration_minutes: Decimal | None
+    distance: Decimal | None
+    calories_burned: Decimal | None
+    garmin_activity_id: str | None
+
+
+class GarminSyncResult(BaseModel):
+    fetched: int
+    added: int
+    skipped_duplicates: int
+
+
 class NotificationTestRequest(BaseModel):
     message: str = "Test notification from Kitchen AI"
 

@@ -4,5 +4,6 @@ sqlalchemy[asyncio]
 asyncpg
 alembic
 httpx
+garminconnect
 python-dotenv
 pydantic-settings

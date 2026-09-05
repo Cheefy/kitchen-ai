@@ -263,6 +263,10 @@ class ActivityLog(Base):
     duration_minutes: Mapped[Decimal | None] = mapped_column(Numeric)
     distance: Mapped[Decimal | None] = mapped_column(Numeric)
     calories_burned: Mapped[Decimal | None] = mapped_column(Numeric)
+    # Not in the original spec's field list -- added while building the
+    # Garmin sync (§9), which re-pulls overlapping date ranges and needs a
+    # way to dedupe against Garmin's own activity ID rather than re-insert.
+    garmin_activity_id: Mapped[str | None] = mapped_column(String, unique=True)
 
 
 class UserGoal(Base):

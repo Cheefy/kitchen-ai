@@ -6,10 +6,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
 from app.database import get_session
-from app.models import PlannedMeal, RecommendationSettings, UserGoal, WeighIn
+from app.models import ActivityLog, PlannedMeal, RecommendationSettings, UserGoal, WeighIn
 from app.services.goals import solve_goal
 
 router = APIRouter()
+
+
+# --- Activity log (Garmin sync writes here, §9) -----------------------------
+
+
+@router.get("/activity-log", response_model=list[schemas.ActivityLogRead])
+async def list_activity_log(session: AsyncSession = Depends(get_session)):
+    result = await session.scalars(select(ActivityLog).order_by(ActivityLog.date.desc()))
+    return result.all()
 
 
 # --- Weigh-ins ---------------------------------------------------------
