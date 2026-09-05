@@ -11,14 +11,35 @@ in .env are only a fallback for that resume failing; MFA can't be
 completed headlessly, so if the account has MFA and tokens ever expire,
 re-run scripts/garmin_login.py interactively rather than relying on this
 fallback succeeding on its own.
+
+Postmortem (Sept 2026): the deployed backend once returned {"fetched": 0}
+indefinitely while a one-off `docker compose exec ... python -c ...`
+using this exact same code path returned real activities every time.
+Root cause: garminconnect's login() does a proactive DI-token refresh
+that is wrapped in a broad try/except logging only at DEBUG (invisible
+under normal INFO logging), and get_activities_by_date()'s pagination
+loop treats *any* falsy page from connectapi() -- including one caused
+by that swallowed refresh failure -- identically to "no more pages",
+returning an empty list with no exception and no visible log line. A
+brand-new process (a fresh `docker exec`, or a container restart) gets
+a clean token load with nothing to refresh, so it just works -- which
+is exactly what made this look like it "worked everywhere except here".
+`docker compose restart backend` alone fixed it with no code change.
+_sync_fetch_activities() below now retries once with a completely fresh
+login before trusting an empty result, and logs loudly either way so a
+recurrence shows up in `docker compose logs backend` instead of hiding
+as a silent {"fetched": 0}.
 """
 
 import asyncio
+import logging
 import os
 from datetime import date, datetime
 from decimal import Decimal
 
 from garminconnect import Garmin
+
+logger = logging.getLogger(__name__)
 
 GARMIN_EMAIL = os.environ.get("GARMIN_EMAIL")
 GARMIN_PASSWORD = os.environ.get("GARMIN_PASSWORD")
@@ -53,7 +74,42 @@ def _sync_login() -> Garmin:
 
 def _sync_fetch_activities(start: date, end: date) -> list[dict]:
     client = _sync_login()
-    return client.get_activities_by_date(start.isoformat(), end.isoformat())
+    activities = client.get_activities_by_date(start.isoformat(), end.isoformat())
+
+    if not activities:
+        # See the postmortem in this module's docstring: an empty result can
+        # mean a genuinely empty date range, or it can mean the long-running
+        # process's login() silently failed to refresh a near-expiry token.
+        # Both look identical from here (no exception, no log line from the
+        # library), so don't trust a first empty result -- retry once with a
+        # brand-new client/login, which is the one thing we've confirmed
+        # reliably clears the stale-session case.
+        logger.warning(
+            "Garmin returned 0 activities for %s..%s on the first attempt; "
+            "retrying once with a fresh login before accepting it as empty.",
+            start,
+            end,
+        )
+        client = _sync_login()
+        activities = client.get_activities_by_date(start.isoformat(), end.isoformat())
+        if activities:
+            logger.warning(
+                "Retry with a fresh login recovered %d activities for %s..%s -- "
+                "the first attempt's empty result was a stale session, not a "
+                "real empty range.",
+                len(activities),
+                start,
+                end,
+            )
+        else:
+            logger.warning(
+                "Garmin still returned 0 activities for %s..%s after a fresh "
+                "login retry; accepting this as a genuinely empty range.",
+                start,
+                end,
+            )
+
+    return activities
 
 
 async def fetch_activities(start: date, end: date) -> list[dict]:
