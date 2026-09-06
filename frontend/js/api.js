@@ -54,6 +54,7 @@ export const api = {
   listActivityLog: () => get("/activity-log"),
   listWeighIns: () => get("/weigh-ins"),
   createWeighIn: (body) => post("/weigh-ins", body),
+  deleteWeighIn: (id) => del(`/weigh-ins/${id}`),
   listGoals: () => get("/goals"),
   getCurrentGoal: () => get("/goals/current").catch((e) => (e.status === 404 ? null : Promise.reject(e))),
   createGoal: (body) => post("/goals", body),

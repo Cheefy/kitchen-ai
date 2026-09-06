@@ -41,6 +41,15 @@ async def list_weigh_ins(session: AsyncSession = Depends(get_session)):
     return result.all()
 
 
+@router.delete("/weigh-ins/{weigh_in_id}", status_code=204)
+async def delete_weigh_in(weigh_in_id: int, session: AsyncSession = Depends(get_session)):
+    entry = await session.get(WeighIn, weigh_in_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="weigh-in not found")
+    await session.delete(entry)
+    await session.commit()
+
+
 # --- Goals -----------------------------------------------------------------
 
 

@@ -178,9 +178,25 @@ export async function renderSettings(container) {
   }
 
   if (weighIns.length) {
-    goalSection.appendChild(
-      el("div", { class: "muted", style: "font-size:0.85rem; margin-top:0.5rem;" }, `Latest weigh-in: ${fmt(weighIns[0].weight, 1)} on ${weighIns[0].date}`)
-    );
+    const weighList = el("div", { class: "log-list", style: "margin-top:0.5rem;" });
+    weighIns.slice(0, 10).forEach((w) => {
+      const row = el("div", { class: "log-entry" }, [
+        el("div", {}, `${fmt(w.weight, 1)} on ${w.date}`),
+      ]);
+      const delBtn = el("button", { class: "btn secondary small" }, "Delete");
+      delBtn.addEventListener("click", async () => {
+        try {
+          await api.deleteWeighIn(w.id);
+          toast("Weigh-in deleted");
+          renderSettings(container);
+        } catch (err) {
+          toast(errorMessage(err), { error: true });
+        }
+      });
+      row.appendChild(delBtn);
+      weighList.appendChild(row);
+    });
+    goalSection.appendChild(weighList);
   }
 
   const weighForm = el("div", { class: "inline-form" }, [
