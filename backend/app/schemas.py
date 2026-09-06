@@ -271,6 +271,65 @@ class AllergenRestrictionCreate(BaseModel):
     allergen_id: int
 
 
+class UserProfileUpdate(BaseModel):
+    age: int | None = None
+    biological_sex: str | None = None  # "male" | "female"
+    height_cm: Decimal | None = None
+    activity_level_override: str | None = None  # null clears it, "" is not accepted
+
+
+class UserProfileRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    age: int
+    biological_sex: str
+    height_cm: Decimal
+    activity_level_override: str | None
+
+
+class TdeeRead(BaseModel):
+    bmr: Decimal
+    activity_level: str
+    activity_level_is_override: bool
+    sessions_per_week: Decimal | None
+    tdee: Decimal
+    calibrating: bool
+
+
+class CalendarMealEntry(BaseModel):
+    id: int
+    timestamp: datetime
+    label: str
+    calories: Decimal | None
+    is_estimate: bool
+
+
+class CalendarExerciseEntry(BaseModel):
+    id: int
+    timestamp: datetime | None
+    activity_type: str | None
+    duration_minutes: Decimal | None
+    distance: Decimal | None
+    calories_burned: Decimal | None
+
+
+class CalendarDay(BaseModel):
+    date: date
+    meals: list[CalendarMealEntry]
+    exercises: list[CalendarExerciseEntry]
+    calories_eaten: Decimal
+    calories_burned_exercise: Decimal
+    tdee: Decimal | None
+    deficit: Decimal | None
+    expected_weight_change_lb: Decimal | None
+    calibrating: bool
+    note: str | None = None
+
+
+class CalendarResponse(BaseModel):
+    days: list[CalendarDay]
+
+
 class WeighInCreate(BaseModel):
     date: date
     weight: Decimal

@@ -267,6 +267,11 @@ class ActivityLog(Base):
     # Garmin sync (§9), which re-pulls overlapping date ranges and needs a
     # way to dedupe against Garmin's own activity ID rather than re-insert.
     garmin_activity_id: Mapped[str | None] = mapped_column(String, unique=True)
+    # Also missing originally: Garmin's raw data includes a real start
+    # time (startTimeLocal), which normalize_activity() was discarding
+    # down to just a date. Added so exercises can be shown timestamped
+    # alongside meals, not just bucketed by day.
+    timestamp: Mapped[datetime | None] = mapped_column(DateTime(timezone=False))
 
 
 class UserGoal(Base):
@@ -281,6 +286,28 @@ class UserGoal(Base):
     carbs_g: Mapped[Decimal | None] = mapped_column(Numeric)
     goal_weight: Mapped[Decimal | None] = mapped_column(Numeric)
     target_date: Mapped[date | None] = mapped_column(Date)
+
+
+class UserProfile(Base):
+    """Singleton profile (age/sex/height), needed for the Mifflin-St Jeor
+    BMR estimate behind the daily kcal deficit and expected-weight-change
+    display. Not in the original spec's schema at all -- §2's TDEE
+    calibration loop assumed a BMR input existed somewhere without ever
+    specifying where it comes from.
+
+    activity_level is derived fresh from a rolling window of activity_log
+    on every TDEE calculation by default (see app/services/tdee.py), so a
+    real change in exercise habits shows up automatically -- but
+    activity_level_override lets that be pinned to an explicit value
+    instead when set; null means "keep auto-deriving it"."""
+
+    __tablename__ = "user_profile"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    age: Mapped[int] = mapped_column(nullable=False)
+    biological_sex: Mapped[str] = mapped_column(String, nullable=False)  # "male" | "female" -- Mifflin-St Jeor input
+    height_cm: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
+    activity_level_override: Mapped[str | None] = mapped_column(String)
 
 
 class RecommendationSettings(Base):

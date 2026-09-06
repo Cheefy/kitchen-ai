@@ -120,17 +120,21 @@ async def fetch_activities(start: date, end: date) -> list[dict]:
 def normalize_activity(raw: dict) -> dict:
     """Maps Garmin's raw activity fields to activity_log's columns.
     Distance stays in meters (Garmin's native unit) -- not converted,
-    since the spec never pinned a unit for this column either."""
+    since the spec never pinned a unit for this column either.
+
+    startTimeLocal carries a real timestamp, not just a date -- this used
+    to get truncated to .date() and the time-of-day thrown away. Now kept
+    in full so exercises can be shown timestamped, not just day-bucketed."""
     start_time_local = raw.get("startTimeLocal", "")
-    activity_date = (
-        datetime.strptime(start_time_local, "%Y-%m-%d %H:%M:%S").date()
-        if start_time_local
-        else date.today()
+    activity_timestamp = (
+        datetime.strptime(start_time_local, "%Y-%m-%d %H:%M:%S") if start_time_local else None
     )
+    activity_date = activity_timestamp.date() if activity_timestamp else date.today()
     duration_seconds = raw.get("duration")
     return {
         "garmin_activity_id": str(raw.get("activityId")),
         "date": activity_date,
+        "timestamp": activity_timestamp,
         "activity_type": raw.get("activityType", {}).get("typeKey"),
         "duration_minutes": Decimal(str(duration_seconds / 60)) if duration_seconds is not None else None,
         "distance": Decimal(str(raw["distance"])) if raw.get("distance") is not None else None,

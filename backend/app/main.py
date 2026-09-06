@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -7,6 +8,7 @@ from sqlalchemy import text
 from app.database import engine
 from app.routers import (
     behavior_settings,
+    calendar,
     cookware,
     garmin,
     ingredients,
@@ -14,6 +16,7 @@ from app.routers import (
     meal_log,
     meal_prep_batches,
     notifications,
+    profile,
     recipes,
     recommendations,
     sessions,
@@ -21,8 +24,17 @@ from app.routers import (
     system_log,
     tracking,
 )
+from app.services.scheduler import start_scheduler, stop_scheduler
 
-app = FastAPI(title="Kitchen AI")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    start_scheduler()
+    yield
+    stop_scheduler()
+
+
+app = FastAPI(title="Kitchen AI", lifespan=lifespan)
 
 app.include_router(ingredients.router)
 app.include_router(inventory.router)
@@ -38,6 +50,8 @@ app.include_router(sessions.router)
 app.include_router(meal_prep_batches.router)
 app.include_router(notifications.router)
 app.include_router(garmin.router)
+app.include_router(profile.router)
+app.include_router(calendar.router)
 
 
 @app.get("/health")

@@ -27,14 +27,16 @@ export async function renderSettings(container) {
   container.appendChild(grid);
   grid.appendChild(el("div", { class: "loading" }, "Loading settings…"));
 
-  let behaviorSettings, recSettings, allergens, goal, weighIns;
+  let behaviorSettings, recSettings, allergens, goal, weighIns, profile, tdee;
   try {
-    [behaviorSettings, recSettings, allergens, goal, weighIns] = await Promise.all([
+    [behaviorSettings, recSettings, allergens, goal, weighIns, profile, tdee] = await Promise.all([
       api.listBehaviorSettings(),
       api.getRecommendationSettings(),
       api.listAllergenRestrictions(),
       api.getCurrentGoal(),
       api.listWeighIns(),
+      api.getProfile(),
+      api.getTdee(),
     ]);
   } catch (err) {
     grid.innerHTML = "";
@@ -43,6 +45,111 @@ export async function renderSettings(container) {
   }
 
   grid.innerHTML = "";
+
+  // --- About me -----------------------------------------------------------
+  const ACTIVITY_LEVELS = ["sedentary", "lightly_active", "moderately_active", "very_active", "extra_active"];
+  const aboutSection = section(
+    "About me",
+    el(
+      "div",
+      { class: "muted", style: "font-size:0.85rem; margin-bottom:0.5rem;" },
+      "Used for your BMR/TDEE estimate, which drives the daily kcal deficit shown on the Activity calendar."
+    )
+  );
+
+  if (tdee) {
+    aboutSection.appendChild(
+      el("div", { class: "goal-summary" }, [
+        el("div", { class: "macro-line" }, [
+          el("span", {}, [el("b", {}, fmt(tdee.bmr)), " kcal BMR"]),
+          el("span", {}, [el("b", {}, fmt(tdee.tdee)), " kcal TDEE"]),
+        ]),
+        el(
+          "div",
+          { class: "muted", style: "font-size:0.82rem;" },
+          `Activity level: ${tdee.activity_level.replace("_", " ")}` +
+            (tdee.activity_level_is_override
+              ? " (manually set)"
+              : ` (auto, ${fmt(tdee.sessions_per_week, 1)} sessions/week over the last 30 days)`) +
+            (tdee.calibrating ? " — still calibrating against your actual weigh-in trend." : "")
+        ),
+      ])
+    );
+  } else {
+    aboutSection.appendChild(
+      el(
+        "div",
+        { class: "empty-state" },
+        "Set your profile and log a weigh-in to see your BMR/TDEE estimate."
+      )
+    );
+  }
+
+  const profileForm = el("div", { class: "goal-form" }, [
+    el("div", { class: "field-row" }, [
+      el("label", {}, "Age"),
+      el("input", { type: "number", id: "profile-age", value: profile ? profile.age : "" }),
+    ]),
+    el("div", { class: "field-row" }, [
+      el("label", {}, "Biological sex (for BMR)"),
+      el(
+        "select",
+        { id: "profile-sex" },
+        ["male", "female"].map((s) =>
+          el("option", { value: s, selected: profile && profile.biological_sex === s ? "selected" : null }, s)
+        )
+      ),
+    ]),
+    el("div", { class: "field-row" }, [
+      el("label", {}, "Height (cm)"),
+      el("input", {
+        type: "number",
+        step: "0.1",
+        id: "profile-height",
+        value: profile ? profile.height_cm : "",
+        placeholder: "e.g. 175.3",
+      }),
+    ]),
+    el("div", { class: "field-row" }, [
+      el("label", {}, "Activity level override"),
+      el("select", { id: "profile-activity-override" }, [
+        el(
+          "option",
+          { value: "", selected: !profile || !profile.activity_level_override ? "selected" : null },
+          "Auto (from Garmin activity)"
+        ),
+        ...ACTIVITY_LEVELS.map((lvl) =>
+          el(
+            "option",
+            { value: lvl, selected: profile && profile.activity_level_override === lvl ? "selected" : null },
+            lvl.replace("_", " ")
+          )
+        ),
+      ]),
+    ]),
+    el("button", { class: "btn small", id: "profile-btn" }, "Save profile"),
+  ]);
+  aboutSection.appendChild(el("div", { class: "section-title" }, profile ? "Edit profile" : "Set up your profile"));
+  aboutSection.appendChild(profileForm);
+  grid.appendChild(aboutSection);
+
+  profileForm.querySelector("#profile-btn").addEventListener("click", async () => {
+    const age = Number(profileForm.querySelector("#profile-age").value);
+    const height_cm = Number(profileForm.querySelector("#profile-height").value);
+    if (!age || !height_cm) return toast("Enter age and height first", { error: true });
+    try {
+      await api.updateProfile({
+        age,
+        biological_sex: profileForm.querySelector("#profile-sex").value,
+        height_cm,
+        activity_level_override: profileForm.querySelector("#profile-activity-override").value || null,
+      });
+      toast("Profile saved");
+      renderSettings(container);
+    } catch (err) {
+      toast(errorMessage(err), { error: true });
+    }
+  });
 
   // --- Goals & weigh-ins -----------------------------------------------
   const goalSection = section("Goals & weigh-ins");
