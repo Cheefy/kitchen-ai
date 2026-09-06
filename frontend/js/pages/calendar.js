@@ -172,8 +172,8 @@ export async function renderCalendar(container) {
     });
 
     summary.appendChild(statBox(exerciseCount, "Activities"));
-    summary.appendChild(statBox(fmt(totalCal), "Calories eaten"));
-    summary.appendChild(statBox(fmt(totalBurned), "Exercise burned"));
+    summary.appendChild(statBox(`${fmt(totalCal)} kcal`, "Calories eaten"));
+    summary.appendChild(statBox(`${fmt(totalBurned)} kcal`, "Exercise burned"));
     if (hasDeficit) {
       const weekChange = -totalDeficit / 3500;
       summary.appendChild(
