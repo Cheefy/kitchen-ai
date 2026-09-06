@@ -82,6 +82,19 @@ _candidates = [
     Path(__file__).resolve().parent.parent / "frontend",
     Path(__file__).resolve().parent.parent.parent / "frontend",
 ]
+class _NoCacheStaticFiles(StaticFiles):
+    """Force revalidation on every load. Plain StaticFiles sends no
+    Cache-Control at all, so browsers fall back to heuristic caching and
+    can keep serving a stale JS file indefinitely after a deploy -- which
+    silently breaks call signatures between files that update together
+    (e.g. rings.js/recipe.js) since only some of them get re-fetched."""
+
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 _frontend_dir = next((p for p in _candidates if p.is_dir()), None)
 if _frontend_dir is not None:
-    app.mount("/", StaticFiles(directory=_frontend_dir, html=True), name="frontend")
+    app.mount("/", _NoCacheStaticFiles(directory=_frontend_dir, html=True), name="frontend")

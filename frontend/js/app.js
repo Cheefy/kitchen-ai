@@ -51,9 +51,14 @@ async function route() {
 }
 
 window.addEventListener("hashchange", route);
-window.addEventListener("DOMContentLoaded", route);
 
-// In case the module loads after DOMContentLoaded already fired.
-if (document.readyState !== "loading") {
+// Module scripts execute after the document has finished parsing, so
+// readyState is already past "loading" by the time this runs -- meaning
+// DOMContentLoaded either already fired or is about to fire regardless.
+// Registering a listener AND doing an immediate call both fired route()
+// on every hard refresh, doubling every render. Pick exactly one path.
+if (document.readyState === "loading") {
+  window.addEventListener("DOMContentLoaded", route, { once: true });
+} else {
   route();
 }
