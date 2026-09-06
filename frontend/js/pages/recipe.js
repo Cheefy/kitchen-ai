@@ -105,6 +105,11 @@ async function computeDailyContext(recipeMacros) {
   // carbs) comes from /profile/targets: TDEE minus the goal's deficit,
   // with macros auto-split for muscle preservation -- not manually
   // entered (app/services/tdee.py).
+  //
+  // Returned as `base` (already logged today + planned-not-logged --
+  // "everything else I ate/have planned today") and `add` (this recipe)
+  // separately, rather than pre-summed, so the ring can draw them as two
+  // visually distinct stacked segments.
   const [mealLog, planned, targets] = await Promise.all([
     api.listMealLog().catch(() => []),
     api.listPlannedMeals().catch(() => []),
@@ -138,14 +143,20 @@ async function computeDailyContext(recipeMacros) {
       }
     : null;
 
-  const projected = {
-    calories: loggedSoFar.calories + plannedNotLogged.calories + Number(recipeMacros.calories || 0),
-    protein_g: loggedSoFar.protein_g + plannedNotLogged.protein_g + Number(recipeMacros.protein_g || 0),
-    carbs_g: loggedSoFar.carbs_g + plannedNotLogged.carbs_g + Number(recipeMacros.carbs_g || 0),
-    fat_g: loggedSoFar.fat_g + plannedNotLogged.fat_g + Number(recipeMacros.fat_g || 0),
+  const base = {
+    calories: loggedSoFar.calories + plannedNotLogged.calories,
+    protein_g: loggedSoFar.protein_g + plannedNotLogged.protein_g,
+    carbs_g: loggedSoFar.carbs_g + plannedNotLogged.carbs_g,
+    fat_g: loggedSoFar.fat_g + plannedNotLogged.fat_g,
+  };
+  const add = {
+    calories: Number(recipeMacros.calories || 0),
+    protein_g: Number(recipeMacros.protein_g || 0),
+    carbs_g: Number(recipeMacros.carbs_g || 0),
+    fat_g: Number(recipeMacros.fat_g || 0),
   };
 
-  return { target, projected, hasTarget: !!target };
+  return { target, base, add, hasTarget: !!target };
 }
 
 export async function renderRecipe(container, recipeId) {
@@ -246,13 +257,19 @@ async function renderPreview(container, recipe, categoryName, blockingSession) {
   if (!recipe.instructions) midCol.appendChild(el("div", { class: "muted" }, "No instructions yet."));
   layout.appendChild(midCol);
 
-  const rightCol = el("div", {}, [el("div", { class: "col-title" }, "Macros (full recipe)")]);
+  const rightCol = el("div", {}, [el("div", { class: "col-title" }, "Today, if you eat this")]);
   try {
     const macros = await api.getRecipeMacros(recipe.id);
-    rightCol.appendChild(macroRingCluster(macros.totals, null));
+    const ctx = await computeDailyContext(macros.totals);
+    rightCol.appendChild(macroRingCluster({ base: ctx.base, add: ctx.add, target: ctx.target }));
     if (!macros.fully_resolved) {
       rightCol.appendChild(
         el("div", { class: "banner" }, "Some ingredients aren't resolved from current inventory yet — macros may be incomplete.")
+      );
+    }
+    if (!ctx.hasTarget) {
+      rightCol.appendChild(
+        el("div", { class: "muted", style: "font-size:0.8rem;" }, "Set your profile (age/sex/height) and log a weigh-in in Settings to see progress toward a target.")
       );
     }
   } catch (err) {
@@ -347,12 +364,13 @@ async function renderCookMode(container, recipe, session, categoryName) {
     rightCol.appendChild(el("div", { class: "col-title" }, "Today, including this recipe"));
     try {
       const ctx = await computeDailyContext(session.macros.totals);
-      rightCol.appendChild(macroRingCluster(ctx.projected, ctx.target));
+      rightCol.appendChild(macroRingCluster({ base: ctx.base, add: ctx.add, target: ctx.target }));
       if (!ctx.hasTarget) {
         rightCol.appendChild(el("div", { class: "muted", style: "font-size:0.8rem;" }, "Set your profile (age/sex/height) and log a weigh-in in Settings to see progress toward a target."));
       }
     } catch {
-      rightCol.appendChild(macroRingCluster(session.macros.totals, null));
+      const zero = { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 };
+      rightCol.appendChild(macroRingCluster({ base: zero, add: session.macros.totals, target: null }));
     }
 
     const actions = el("div", { class: "cook-actions" }, [
