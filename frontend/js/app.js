@@ -50,15 +50,36 @@ async function route() {
   await renderHome(view, navigate);
 }
 
-window.addEventListener("hashchange", route);
+// route() mutates #view incrementally (appendChild calls interleaved with
+// awaited fetches), not as one atomic swap. If two route() calls ever run
+// concurrently -- observed in practice on a fresh page load/refresh, where
+// something fires the router twice in close succession -- their appends
+// interleave and both survive, leaving duplicated content in the DOM.
+// Serializing every call through one chain guarantees only one is ever
+// running at a time; a second call queued for the same hash is also just
+// dropped, since it would render identical content anyway.
+let routeChain = Promise.resolve();
+let lastQueuedHash = null;
+
+function scheduleRoute() {
+  const hash = window.location.hash || "#/home";
+  if (hash === lastQueuedHash) return routeChain;
+  lastQueuedHash = hash;
+  routeChain = routeChain.then(route).catch((err) => console.error("routing failed", err));
+  return routeChain;
+}
+
+window.addEventListener("hashchange", scheduleRoute);
 
 // Module scripts execute after the document has finished parsing, so
 // readyState is already past "loading" by the time this runs -- meaning
 // DOMContentLoaded either already fired or is about to fire regardless.
 // Registering a listener AND doing an immediate call both fired route()
-// on every hard refresh, doubling every render. Pick exactly one path.
+// on every hard refresh. Pick exactly one path (the scheduleRoute guard
+// above is the real fix for the duplicate-render bug; this just avoids
+// scheduling it twice for no reason).
 if (document.readyState === "loading") {
-  window.addEventListener("DOMContentLoaded", route, { once: true });
+  window.addEventListener("DOMContentLoaded", scheduleRoute, { once: true });
 } else {
-  route();
+  scheduleRoute();
 }
