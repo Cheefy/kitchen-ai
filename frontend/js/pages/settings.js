@@ -1,5 +1,7 @@
 import { api } from "../api.js";
-import { el, fmt, toast, errorMessage } from "../util.js";
+import { el, fmt, round, toast, errorMessage } from "../util.js";
+
+const CM_PER_INCH = 2.54;
 
 const SLIDER_DEFS = [
   { key: "calorie_deficit_adherence", label: "Calorie/deficit adherence", hint: "How strictly to chase your calorie target vs. other factors." },
@@ -101,13 +103,13 @@ export async function renderSettings(container) {
       ),
     ]),
     el("div", { class: "field-row" }, [
-      el("label", {}, "Height (cm)"),
+      el("label", {}, "Height (inches)"),
       el("input", {
         type: "number",
         step: "0.1",
         id: "profile-height",
-        value: profile ? profile.height_cm : "",
-        placeholder: "e.g. 175.3",
+        value: profile ? round(profile.height_cm / CM_PER_INCH, 1) : "",
+        placeholder: "e.g. 69",
       }),
     ]),
     el("div", { class: "field-row" }, [
@@ -135,8 +137,9 @@ export async function renderSettings(container) {
 
   profileForm.querySelector("#profile-btn").addEventListener("click", async () => {
     const age = Number(profileForm.querySelector("#profile-age").value);
-    const height_cm = Number(profileForm.querySelector("#profile-height").value);
-    if (!age || !height_cm) return toast("Enter age and height first", { error: true });
+    const heightIn = Number(profileForm.querySelector("#profile-height").value);
+    const height_cm = heightIn * CM_PER_INCH;
+    if (!age || !heightIn) return toast("Enter age and height first", { error: true });
     try {
       await api.updateProfile({
         age,
