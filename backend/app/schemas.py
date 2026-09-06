@@ -559,3 +559,18 @@ class SettingsImportResult(BaseModel):
     recommendation_settings_restored: bool
     behavior_settings_restored: int
     allergen_restrictions_restored: int
+
+
+class VoiceCommandRequest(BaseModel):
+    transcript: str
+
+
+class VoiceToolCallLog(BaseModel):
+    name: str
+    arguments: dict
+    result: dict
+
+
+class VoiceCommandResult(BaseModel):
+    reply: str
+    tool_calls: list[VoiceToolCallLog]

@@ -286,14 +286,19 @@ Three-column layout, mockups built and approved (built/shown separately due to t
 
 ## 12. LLM reliability for compound commands
 
-Architecture notes, not yet implemented:
+**v1 built**: `app/services/llm_client.py` (thin OpenAI-compatible wrapper around llama.cpp), `app/services/voice_tools.py` (a curated 18-tool set covering every example voice command in this doc — not all 59+ endpoints at once, since dumping the whole API into one tool list hurts selection reliability more than it helps; tools call the backend's own REST API internally rather than duplicating business logic), and `app/services/voice_orchestrator.py` (the tool-call loop, system prompt encoding the Guiding Principle's assume-and-announce vs. ask-first split). `POST /voice/command` is the text-only test harness — takes a transcript, returns the reply and a log of tool calls made, ahead of any real STT/TTS or Home Assistant wiring.
+
+Currently running Qwen3-Coder-30B-A3B-Instruct (Unsloth GGUF, UD-Q4_K_XL) — swapped in from the Qwen3-8B placeholder specifically for its tool-calling strength (Coder-line models lean heavily on reliable function-calling for agentic coding tasks), at the cost of unknown general conversational fluency for non-coding, kitchen-domain phrasing. Not yet benchmarked against the alternative — see §14.
+
+Still architecture notes, not yet implemented:
 
 - A reasoning/scratchpad step before tool execution — the model explicitly writes out the command's parsed structure before calling tools — improves multi-part decomposition reliability.
-- Backend tools stay atomic/single-purpose rather than a few large multi-parameter functions — easier for the model to chain correctly (this is why `meal_prep_batches` deduction and eaten-logging stay separable actions even when triggered by one compound command, §3/§7).
 - A few-shot example set of real compound-command phrasings gets built into the system prompt once real usage data exists.
 - For compound-sounding input, consider a two-stage pipeline: a cheap first pass splits the utterance into clean single-intent sub-commands, each handled normally from there.
-- Misparsed compound commands caught in `system_log` (§3) feed back in as few-shot examples in the near term, and potentially a small LoRA fine-tune on the local model longer-term (feasible given the hardware already purchased).
-- **Before committing to a specific model** (Qwen3 is the leading candidate, currently Qwen3-8B as a pipeline-validation placeholder — see §2): benchmark a written test set of realistic compound phrasings against it and any competitive alternative available at build time. "Good at tool-calling generally" doesn't guarantee "good at this project's specific phrasing patterns." Feeds directly into the open model-choice item, §14.
+- Misparsed compound commands caught in `system_log` (§3) feed back in as few-shot examples in the near term, and potentially a small LoRA fine-tune on the local model longer-term (feasible given the hardware already purchased). Not yet wired up — `POST /voice/command` doesn't write to `system_log` at all yet.
+- **Before committing to this model**: benchmark a written test set of realistic compound phrasings against it and the general-purpose Qwen3-30B-A3B-Instruct-2507 (or similar) as a comparison point now that a real harness (`/voice/command`) exists to run them through. "Good at tool-calling generally" doesn't guarantee "good at this project's specific phrasing patterns" — and "good at coding tool-calling" doesn't guarantee "good at kitchen-domain conversation" either. Feeds directly into the open model-choice item, §14.
+
+Backend tools stay atomic/single-purpose rather than a few large multi-parameter functions — easier for the model to chain correctly (this is why `meal_prep_batches` deduction and eaten-logging stay separable actions even when triggered by one compound command, §3/§7, and why `voice_tools.py` exposes `adjust_ingredient_delta`/`set_ingredient_absolute`/`scale_recipe` as three separate tools rather than one with a mode flag).
 - **Response streaming to TTS**: the LLM's output is chunked (word/phrase/sentence, configurable — sentence-level by default) and handed to TTS per chunk as it's ready, rather than waiting for the full response — cuts perceived latency on longer or compound replies. Sentence-level chunking works today with Piper as already planned (§1) — just repeated calls, no different TTS engine needed. Only revisit the TTS engine choice if a specific limitation shows up trying to go finer-grained (word-level) with Piper.
 
 ---

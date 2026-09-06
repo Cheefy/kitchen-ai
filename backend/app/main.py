@@ -24,6 +24,7 @@ from app.routers import (
     shopping_list,
     system_log,
     tracking,
+    voice,
 )
 from app.services.scheduler import start_scheduler, stop_scheduler
 
@@ -54,6 +55,7 @@ app.include_router(garmin.router)
 app.include_router(profile.router)
 app.include_router(calendar.router)
 app.include_router(settings_backup.router)
+app.include_router(voice.router)
 
 
 @app.get("/health")
