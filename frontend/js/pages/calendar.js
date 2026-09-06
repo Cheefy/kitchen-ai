@@ -9,19 +9,20 @@ function timeOf(ts) {
 }
 
 function entryRow(entry) {
-  if (entry.kind === "meal") {
-    return el("div", { class: "cal-entry meal" }, [
+  const isMeal = entry.kind === "meal";
+  const label = isMeal ? entry.label + (entry.is_estimate ? " (est.)" : "") : entry.activity_type || "activity";
+  const calText = isMeal
+    ? `${fmt(entry.calories)} kcal`
+    : entry.calories_burned
+    ? `−${fmt(entry.calories_burned)} kcal`
+    : "";
+  return el("div", { class: "cal-entry " + entry.kind }, [
+    el("div", { class: "cal-top" }, [
       el("span", { class: "cal-time" }, timeOf(entry.timestamp)),
-      el("span", { class: "cal-icon" }, "🍽"),
-      el("span", { class: "cal-label" }, entry.label + (entry.is_estimate ? " (est.)" : "")),
-      el("span", { class: "cal-cal" }, `${fmt(entry.calories)} kcal`),
-    ]);
-  }
-  return el("div", { class: "cal-entry exercise" }, [
-    el("span", { class: "cal-time" }, timeOf(entry.timestamp)),
-    el("span", { class: "cal-icon" }, "🏃"),
-    el("span", { class: "cal-label" }, entry.activity_type || "activity"),
-    el("span", { class: "cal-cal" }, entry.calories_burned ? `−${fmt(entry.calories_burned)} kcal` : ""),
+      el("span", { class: "cal-icon" }, isMeal ? "🍽" : "🏃"),
+    ]),
+    el("div", { class: "cal-label" }, label),
+    calText ? el("div", { class: "cal-cal" }, calText) : null,
   ]);
 }
 
