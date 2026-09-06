@@ -68,7 +68,12 @@ async def start_session(
     """kitchen_ai_spec.md §7 -- "Let's start" while a recipe's pulled up.
     Explicit and voice-triggered, not implicit; at most one active session
     at a time (DB-enforced, migration 0004)."""
-    recipe = await session.get(Recipe, body.recipe_id)
+    result = await session.execute(
+        select(Recipe)
+        .where(Recipe.id == body.recipe_id)
+        .options(selectinload(Recipe.ingredients))
+    )
+    recipe = result.unique().scalar_one_or_none()
     if recipe is None:
         raise HTTPException(status_code=404, detail="recipe not found")
 
