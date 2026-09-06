@@ -20,6 +20,7 @@ from app.routers import (
     recipes,
     recommendations,
     sessions,
+    settings_backup,
     shopping_list,
     system_log,
     tracking,
@@ -52,6 +53,7 @@ app.include_router(notifications.router)
 app.include_router(garmin.router)
 app.include_router(profile.router)
 app.include_router(calendar.router)
+app.include_router(settings_backup.router)
 
 
 @app.get("/health")

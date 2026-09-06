@@ -453,4 +453,56 @@ export async function renderSettings(container) {
   } catch (err) {
     logList.appendChild(el("div", { class: "empty-state" }, errorMessage(err)));
   }
+
+  // --- Backup & restore -----------------------------------------------------
+  const backupSection = section(
+    "Backup & restore",
+    el(
+      "div",
+      { class: "muted", style: "font-size:0.85rem; margin-bottom:0.5rem;" },
+      "Saves your profile, recommendation sliders, behavior toggles, and allergen restrictions to a file on this device. Doesn't include goals, weigh-ins, or logs — those are dated history, not preferences."
+    )
+  );
+  const exportBtn = el("button", { class: "btn secondary small" }, "Export settings");
+  const importInput = el("input", { type: "file", accept: "application/json", style: "display:none;" });
+  const importBtn = el("button", { class: "btn secondary small" }, "Import settings");
+  backupSection.appendChild(el("div", { class: "inline-form" }, [exportBtn, importBtn, importInput]));
+  grid.appendChild(backupSection);
+
+  exportBtn.addEventListener("click", async () => {
+    try {
+      const data = await api.exportSettings();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `kitchen-ai-settings-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast("Settings exported");
+    } catch (err) {
+      toast(errorMessage(err), { error: true });
+    }
+  });
+
+  importBtn.addEventListener("click", () => importInput.click());
+  importInput.addEventListener("change", async () => {
+    const file = importInput.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const result = await api.importSettings(data);
+      toast(
+        `Restored: profile ${result.profile_restored ? "✓" : "–"}, ${result.behavior_settings_restored} behavior setting(s), ${result.allergen_restrictions_restored} allergen restriction(s)`
+      );
+      renderSettings(container);
+    } catch (err) {
+      toast(err instanceof SyntaxError ? "That file isn't valid JSON" : errorMessage(err), { error: true });
+    } finally {
+      importInput.value = "";
+    }
+  });
 }

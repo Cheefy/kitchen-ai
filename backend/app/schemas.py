@@ -524,3 +524,24 @@ class FinishCookingResult(BaseModel):
     batch: MealPrepBatchRead
     deductions: list[DeductionLine]
     meal_log_entry: MealLogRead | None = None
+
+
+class SettingsExport(BaseModel):
+    """A local backup file for the app-level preferences you'd otherwise
+    have to re-enter through Settings: profile, recommendation sliders,
+    behavior toggles, allergen restrictions. Deliberately excludes goals
+    (a dated history, not a "preference") and anything tied to a moment
+    in time (weigh-ins, meal/activity logs)."""
+
+    exported_at: datetime
+    profile: UserProfileRead | None
+    recommendation_settings: RecommendationSettingsRead
+    behavior_settings: list[BehaviorSettingRead]
+    allergen_restrictions: list[AllergenRead]
+
+
+class SettingsImportResult(BaseModel):
+    profile_restored: bool
+    recommendation_settings_restored: bool
+    behavior_settings_restored: int
+    allergen_restrictions_restored: int
