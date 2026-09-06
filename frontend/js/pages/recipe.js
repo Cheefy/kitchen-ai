@@ -101,14 +101,14 @@ function modal(contentBuilder) {
 
 async function computeDailyContext(recipeMacros) {
   // kitchen_ai_spec.md §8: remaining = daily_target - meal_log so far
-  // today - planned_meals not yet logged. Daily calorie target isn't a
-  // stored field (needs TDEE calibration, not built yet) -- when the
-  // current goal has protein/carb/fat grams set, that implies a calorie
-  // target (4/4/9 kcal per gram) which is a reasonable stand-in.
-  const [goal, mealLog, planned] = await Promise.all([
-    api.getCurrentGoal().catch(() => null),
+  // today - planned_meals not yet logged. Target (calories + protein/fat/
+  // carbs) comes from /profile/targets: TDEE minus the goal's deficit,
+  // with macros auto-split for muscle preservation -- not manually
+  // entered (app/services/tdee.py).
+  const [mealLog, planned, targets] = await Promise.all([
     api.listMealLog().catch(() => []),
     api.listPlannedMeals().catch(() => []),
+    api.getDailyTargets().catch(() => null),
   ]);
 
   const today = new Date().toDateString();
@@ -129,15 +129,14 @@ async function computeDailyContext(recipeMacros) {
     fat_g: sumField(planned, "estimated_fat_g"),
   };
 
-  let target = null;
-  if (goal && goal.protein_g && goal.carbs_g && goal.fat_g) {
-    target = {
-      protein_g: Number(goal.protein_g),
-      carbs_g: Number(goal.carbs_g),
-      fat_g: Number(goal.fat_g),
-      calories: Number(goal.protein_g) * 4 + Number(goal.carbs_g) * 4 + Number(goal.fat_g) * 9,
-    };
-  }
+  const target = targets
+    ? {
+        calories: Number(targets.calorie_target),
+        protein_g: Number(targets.protein_g),
+        carbs_g: Number(targets.carbs_g),
+        fat_g: Number(targets.fat_g),
+      }
+    : null;
 
   const projected = {
     calories: loggedSoFar.calories + plannedNotLogged.calories + Number(recipeMacros.calories || 0),
@@ -146,7 +145,7 @@ async function computeDailyContext(recipeMacros) {
     fat_g: loggedSoFar.fat_g + plannedNotLogged.fat_g + Number(recipeMacros.fat_g || 0),
   };
 
-  return { target, projected, hasGoal: !!goal };
+  return { target, projected, hasTarget: !!target };
 }
 
 export async function renderRecipe(container, recipeId) {
@@ -349,8 +348,8 @@ async function renderCookMode(container, recipe, session, categoryName) {
     try {
       const ctx = await computeDailyContext(session.macros.totals);
       rightCol.appendChild(macroRingCluster(ctx.projected, ctx.target));
-      if (!ctx.hasGoal) {
-        rightCol.appendChild(el("div", { class: "muted", style: "font-size:0.8rem;" }, "Set a goal in Settings to see progress toward a target."));
+      if (!ctx.hasTarget) {
+        rightCol.appendChild(el("div", { class: "muted", style: "font-size:0.8rem;" }, "Set your profile (age/sex/height) and log a weigh-in in Settings to see progress toward a target."));
       }
     } catch {
       rightCol.appendChild(macroRingCluster(session.macros.totals, null));

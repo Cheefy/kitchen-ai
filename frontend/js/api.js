@@ -66,6 +66,7 @@ export const api = {
   getProfile: () => get("/profile").catch((e) => (e.status === 404 ? null : Promise.reject(e))),
   updateProfile: (body) => put("/profile", body),
   getTdee: () => get("/profile/tdee").catch((e) => (e.status === 409 ? null : Promise.reject(e))),
+  getDailyTargets: () => get("/profile/targets").catch((e) => (e.status === 409 ? null : Promise.reject(e))),
   getCalendar: (start, end) => get(`/calendar?start=${start}&end=${end}`),
   exportSettings: () => get("/settings/export"),
   importSettings: (body) => post("/settings/import", body),

@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import schemas
 from app.database import get_session
 from app.models import UserProfile
-from app.services.tdee import ProfileIncomplete, estimate_tdee
+from app.services.tdee import ProfileIncomplete, estimate_daily_targets, estimate_tdee
 
 router = APIRouter()
 
@@ -55,3 +55,27 @@ async def get_tdee(session: AsyncSession = Depends(get_session)):
         return await estimate_tdee(session)
     except ProfileIncomplete as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.get("/profile/targets", response_model=schemas.DailyTargetsRead)
+async def get_daily_targets(session: AsyncSession = Depends(get_session)):
+    """Calorie target (TDEE minus the current goal's deficit, if any) plus
+    protein/fat/carbs auto-split for muscle preservation -- not manually
+    entered, see app/services/tdee.py for the heuristic."""
+    try:
+        targets = await estimate_daily_targets(session)
+    except ProfileIncomplete as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return schemas.DailyTargetsRead(
+        bmr=targets.tdee.bmr,
+        tdee=targets.tdee.tdee,
+        activity_level=targets.tdee.activity_level,
+        activity_level_is_override=targets.tdee.activity_level_is_override,
+        sessions_per_week=targets.tdee.sessions_per_week,
+        calibrating=targets.tdee.calibrating,
+        calorie_target=targets.calorie_target,
+        deficit_applied=targets.deficit_applied,
+        protein_g=targets.protein_g,
+        fat_g=targets.fat_g,
+        carbs_g=targets.carbs_g,
+    )

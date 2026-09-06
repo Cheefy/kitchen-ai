@@ -38,7 +38,7 @@ export async function renderSettings(container) {
       api.getCurrentGoal(),
       api.listWeighIns(),
       api.getProfile(),
-      api.getTdee(),
+      api.getDailyTargets(),
     ]);
   } catch (err) {
     grid.innerHTML = "";
@@ -55,7 +55,7 @@ export async function renderSettings(container) {
     el(
       "div",
       { class: "muted", style: "font-size:0.85rem; margin-bottom:0.5rem;" },
-      "Used for your BMR/TDEE estimate, which drives the daily kcal deficit shown on the Activity calendar."
+      "Used for your BMR/TDEE estimate (drives the daily kcal deficit on the Activity calendar) and your protein/carb/fat targets (auto-split from your calorie target to preserve muscle, not manually entered)."
     )
   );
 
@@ -74,6 +74,19 @@ export async function renderSettings(container) {
               ? " (manually set)"
               : ` (auto, ${fmt(tdee.sessions_per_week, 1)} sessions/week over the last 30 days)`) +
             (tdee.calibrating ? " — still calibrating against your actual weigh-in trend." : "")
+        ),
+        el("div", { class: "macro-line", style: "margin-top:6px;" }, [
+          el("span", {}, [el("b", {}, fmt(tdee.calorie_target)), " kcal target"]),
+          el("span", {}, [el("b", {}, fmt(tdee.protein_g)), "g protein"]),
+          el("span", {}, [el("b", {}, fmt(tdee.carbs_g)), "g carbs"]),
+          el("span", {}, [el("b", {}, fmt(tdee.fat_g)), "g fat"]),
+        ]),
+        el(
+          "div",
+          { class: "muted", style: "font-size:0.78rem;" },
+          Number(tdee.deficit_applied) !== 0
+            ? `TDEE minus your ${fmt(Math.abs(tdee.deficit_applied))} kcal/day ${Number(tdee.deficit_applied) > 0 ? "deficit" : "surplus"} goal. Protein set to 1g/lb bodyweight; fat floored for hormonal health; carbs fill the rest.`
+            : "No deficit/surplus goal set, so this is your maintenance calories. Protein set to 1g/lb bodyweight; fat floored for hormonal health; carbs fill the rest."
         ),
       ])
     );
@@ -157,22 +170,15 @@ export async function renderSettings(container) {
   // --- Goals & weigh-ins -----------------------------------------------
   const goalSection = section("Goals & weigh-ins");
   if (goal) {
-    const impliedCal =
-      goal.protein_g != null && goal.carbs_g != null && goal.fat_g != null
-        ? Number(goal.protein_g) * 4 + Number(goal.carbs_g) * 4 + Number(goal.fat_g) * 9
-        : null;
     goalSection.appendChild(
       el("div", { class: "goal-summary" }, [
         el("div", {}, [el("b", {}, "Current goal"), ` — set ${goal.effective_date}${goal.goal_type ? ` (${goal.goal_type})` : ""}`]),
         el("div", { class: "macro-line" }, [
           goal.goal_weight != null ? el("span", {}, `Target weight: ${fmt(goal.goal_weight, 1)}`) : null,
           goal.target_date ? el("span", {}, `by ${goal.target_date}`) : null,
-        ].filter(Boolean)),
-        el("div", { class: "macro-line" }, [
-          goal.protein_g != null ? el("span", {}, [el("b", {}, fmt(goal.protein_g)), "g protein"]) : null,
-          goal.carbs_g != null ? el("span", {}, [el("b", {}, fmt(goal.carbs_g)), "g carbs"]) : null,
-          goal.fat_g != null ? el("span", {}, [el("b", {}, fmt(goal.fat_g)), "g fat"]) : null,
-          impliedCal != null ? el("span", {}, [el("b", {}, fmt(impliedCal)), " kcal (implied)"]) : null,
+          goal.target_deficit_surplus != null
+            ? el("span", {}, `${fmt(Math.abs(goal.target_deficit_surplus))} kcal/day ${Number(goal.target_deficit_surplus) >= 0 ? "deficit" : "surplus"}`)
+            : null,
         ].filter(Boolean)),
       ])
     );
@@ -218,21 +224,18 @@ export async function renderSettings(container) {
       el("input", { type: "text", placeholder: "e.g. cut, bulk, maintain", id: "goal-type" }),
     ]),
     el("div", { class: "field-row" }, [
-      el("label", {}, "Protein (g/day)"),
-      el("input", { type: "number", step: "1", id: "goal-protein" }),
+      el("label", {}, "Daily deficit (kcal/day)"),
+      el("input", { type: "number", step: "1", id: "goal-deficit", placeholder: "e.g. 500 (negative = surplus)" }),
     ]),
     el("div", { class: "field-row" }, [
-      el("label", {}, "Carbs (g/day)"),
-      el("input", { type: "number", step: "1", id: "goal-carbs" }),
-    ]),
-    el("div", { class: "field-row" }, [
-      el("label", {}, "Fat (g/day)"),
-      el("input", { type: "number", step: "1", id: "goal-fat" }),
-    ]),
-    el("div", { class: "field-row" }, [
-      el("label", {}, "Target date (optional)"),
+      el("label", {}, "Target date"),
       el("input", { type: "date", id: "goal-target-date" }),
     ]),
+    el(
+      "div",
+      { class: "muted", style: "font-size:0.78rem;" },
+      "Fill in either the daily deficit or the target date, not both — the other is calculated for you from your current weight and goal weight."
+    ),
     el("button", { class: "btn small", id: "goal-btn" }, "Save new goal"),
   ]);
   goalSection.appendChild(el("div", { class: "section-title" }, "Set a new goal"));
@@ -254,13 +257,12 @@ export async function renderSettings(container) {
   goalForm.querySelector("#goal-btn").addEventListener("click", async () => {
     const weight = Number(goalForm.querySelector("#goal-weight").value);
     if (!weight) return toast("Enter a goal weight first", { error: true });
+    const deficitVal = goalForm.querySelector("#goal-deficit").value;
     const body = {
       effective_date: new Date().toISOString().slice(0, 10),
       goal_weight: weight,
       goal_type: goalForm.querySelector("#goal-type").value || null,
-      protein_g: goalForm.querySelector("#goal-protein").value || null,
-      carbs_g: goalForm.querySelector("#goal-carbs").value || null,
-      fat_g: goalForm.querySelector("#goal-fat").value || null,
+      target_deficit_surplus: deficitVal !== "" ? Number(deficitVal) : null,
       target_date: goalForm.querySelector("#goal-target-date").value || null,
     };
     try {

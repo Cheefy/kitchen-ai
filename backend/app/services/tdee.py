@@ -18,7 +18,7 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import ActivityLog, UserProfile, WeighIn
+from app.models import ActivityLog, UserGoal, UserProfile, WeighIn
 
 LB_TO_KG = Decimal("0.45359237")
 
@@ -32,6 +32,15 @@ ACTIVITY_MULTIPLIERS = {
 
 ACTIVITY_LOOKBACK_DAYS = 30
 
+# Macro-split heuristic for a deficit without losing muscle: protein is the
+# primary lever (standard sports-nutrition guidance, ~1g per lb bodyweight
+# during a cut), fat gets a floor for hormonal health, carbs fill whatever
+# calories are left. Not personalized beyond bodyweight/calorie target --
+# a reasonable default, not a substitute for individualized coaching.
+PROTEIN_G_PER_LB = Decimal("1.0")
+FAT_MIN_G_PER_LB = Decimal("0.3")
+FAT_MIN_PCT_OF_CALORIES = Decimal("0.20")
+
 
 @dataclass
 class TdeeEstimate:
@@ -40,7 +49,18 @@ class TdeeEstimate:
     activity_level_is_override: bool
     sessions_per_week: Decimal | None
     tdee: Decimal
+    weight_lb: Decimal
     calibrating: bool  # always True until the weeks-long calibration loop (§2) exists
+
+
+@dataclass
+class DailyTargets:
+    tdee: TdeeEstimate
+    calorie_target: Decimal
+    deficit_applied: Decimal
+    protein_g: Decimal
+    fat_g: Decimal
+    carbs_g: Decimal
 
 
 class ProfileIncomplete(Exception):
@@ -109,5 +129,35 @@ async def estimate_tdee(session: AsyncSession) -> TdeeEstimate:
         activity_level_is_override=is_override,
         sessions_per_week=sessions_per_week,
         tdee=tdee,
+        weight_lb=latest_weigh_in.weight,
         calibrating=True,
+    )
+
+
+async def estimate_daily_targets(session: AsyncSession) -> DailyTargets:
+    """calorie_target = TDEE minus whatever daily deficit/surplus the
+    current goal asks for (0 if no goal, i.e. maintenance). Macros are
+    then split off that target per the muscle-preservation heuristic
+    above, not manually entered."""
+    tdee_estimate = await estimate_tdee(session)
+
+    goal = await session.scalar(select(UserGoal).order_by(UserGoal.effective_date.desc()).limit(1))
+    deficit = goal.target_deficit_surplus if goal and goal.target_deficit_surplus is not None else Decimal("0")
+
+    calorie_target = tdee_estimate.tdee - deficit
+
+    protein_g = tdee_estimate.weight_lb * PROTEIN_G_PER_LB
+    fat_g = max(
+        tdee_estimate.weight_lb * FAT_MIN_G_PER_LB,
+        (calorie_target * FAT_MIN_PCT_OF_CALORIES) / Decimal("9"),
+    )
+    carbs_g = max(Decimal("0"), (calorie_target - protein_g * 4 - fat_g * 9) / Decimal("4"))
+
+    return DailyTargets(
+        tdee=tdee_estimate,
+        calorie_target=calorie_target,
+        deficit_applied=deficit,
+        protein_g=protein_g,
+        fat_g=fat_g,
+        carbs_g=carbs_g,
     )

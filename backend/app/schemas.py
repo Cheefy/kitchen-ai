@@ -296,6 +296,20 @@ class TdeeRead(BaseModel):
     calibrating: bool
 
 
+class DailyTargetsRead(BaseModel):
+    bmr: Decimal
+    tdee: Decimal
+    activity_level: str
+    activity_level_is_override: bool
+    sessions_per_week: Decimal | None
+    calibrating: bool
+    calorie_target: Decimal
+    deficit_applied: Decimal
+    protein_g: Decimal
+    fat_g: Decimal
+    carbs_g: Decimal
+
+
 class CalendarMealEntry(BaseModel):
     id: int
     timestamp: datetime
