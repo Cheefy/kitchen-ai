@@ -45,6 +45,29 @@ export const api = {
   getRecipeMacros: (id) => get(`/recipes/${id}/macros`),
   getDownscaleSuggestion: (id) => get(`/recipes/${id}/downscale-suggestion`),
   listCategories: () => get("/categories").catch(() => []),
+  createCategory: (name) => post("/categories", { name }),
+
+  // Ingredients (catalog) / nutrition & barcode lookup
+  listIngredients: (q) => get(`/ingredients${q ? `?q=${encodeURIComponent(q)}` : ""}`),
+  createIngredient: (body) => post("/ingredients", body),
+  lookupBarcodeLocal: (upc) => get(`/ingredients/barcode/${upc}`),
+  lookupBarcodeExternal: (upc) => get(`/ingredients/barcode/${upc}/external`),
+  createIngredientFromBarcode: (upc, categoryId) =>
+    post("/ingredients/from-barcode", { upc, category_id: categoryId }),
+  searchNutrition: (q) => get(`/ingredients/nutrition-search?q=${encodeURIComponent(q)}`),
+
+  // Inventory (ingredient stock)
+  listInventory: (ingredientId) =>
+    get(`/inventory${ingredientId ? `?ingredient_id=${ingredientId}` : ""}`),
+  addInventoryItem: (body) => post("/inventory", body),
+  updateInventoryItem: (id, body) => patch(`/inventory/${id}`, body),
+  deleteInventoryItem: (id) => del(`/inventory/${id}`),
+
+  // Cookware ("parts")
+  listCookware: () => get("/cookware"),
+  createCookware: (body) => post("/cookware", body),
+  updateCookware: (id, body) => patch(`/cookware/${id}`, body),
+  deleteCookware: (id) => del(`/cookware/${id}`),
 
   // Recommendations
   getRecommendations: (maxMinutes) =>

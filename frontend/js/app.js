@@ -2,6 +2,7 @@ import { renderHome } from "./pages/home.js";
 import { renderCalendar } from "./pages/calendar.js";
 import { renderRecipe } from "./pages/recipe.js";
 import { renderSettings } from "./pages/settings.js";
+import { renderInventory } from "./pages/inventory.js";
 
 const view = document.getElementById("view");
 const navTabs = document.getElementById("nav-tabs");
@@ -25,6 +26,12 @@ async function route() {
   if (!path || path === "home") {
     setActiveTab("home");
     await renderHome(view, navigate);
+    return;
+  }
+
+  if (path === "inventory") {
+    setActiveTab("inventory");
+    await renderInventory(view);
     return;
   }
 

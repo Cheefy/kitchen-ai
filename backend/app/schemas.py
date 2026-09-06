@@ -92,6 +92,39 @@ class CookwareRead(CookwareCreate):
     id: int
 
 
+class CookwareUpdate(BaseModel):
+    name: str | None = None
+    type: str | None = None
+    tare_weight: Decimal | None = None
+    label_number: str | None = None
+
+
+class NutritionCandidate(BaseModel):
+    """kitchen_ai_spec.md §4 -- a not-yet-persisted preview of an external
+    nutrition/barcode lookup result, for the user to review before it's
+    saved as a real Ingredient (barcode hits are announced, not silently
+    trusted, since they seed data used everywhere)."""
+
+    name: str
+    source: str
+    upc_barcode: str | None = None
+    serving_size: Decimal | None = None
+    serving_size_unit: str = "g"
+    calories: float | None = None
+    protein_g: float | None = None
+    carbs_g: float | None = None
+    fat_g: float | None = None
+    saturated_fat_g: float | None = None
+    sodium_mg: float | None = None
+    fiber_g: float | None = None
+    sugars_g: float | None = None
+
+
+class IngredientFromBarcode(BaseModel):
+    upc: str
+    category_id: int
+
+
 class RecipeIngredientIn(BaseModel):
     category_id: int
     quantity: Decimal
