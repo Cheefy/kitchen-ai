@@ -17,7 +17,9 @@ router = APIRouter()
 
 @router.get("/activity-log", response_model=list[schemas.ActivityLogRead])
 async def list_activity_log(session: AsyncSession = Depends(get_session)):
-    result = await session.scalars(select(ActivityLog).order_by(ActivityLog.date.desc()))
+    result = await session.scalars(
+        select(ActivityLog).order_by(ActivityLog.date.desc(), ActivityLog.id.desc())
+    )
     return result.all()
 
 
@@ -37,7 +39,9 @@ async def create_weigh_in(
 
 @router.get("/weigh-ins", response_model=list[schemas.WeighInRead])
 async def list_weigh_ins(session: AsyncSession = Depends(get_session)):
-    result = await session.scalars(select(WeighIn).order_by(WeighIn.date.desc()))
+    result = await session.scalars(
+        select(WeighIn).order_by(WeighIn.date.desc(), WeighIn.id.desc())
+    )
     return result.all()
 
 
@@ -58,7 +62,7 @@ async def create_goal(
     body: schemas.UserGoalCreate, session: AsyncSession = Depends(get_session)
 ):
     latest_weigh_in = await session.scalar(
-        select(WeighIn).order_by(WeighIn.date.desc()).limit(1)
+        select(WeighIn).order_by(WeighIn.date.desc(), WeighIn.id.desc()).limit(1)
     )
     if latest_weigh_in is None:
         raise HTTPException(
@@ -91,14 +95,19 @@ async def create_goal(
 
 @router.get("/goals", response_model=list[schemas.UserGoalRead])
 async def list_goals(session: AsyncSession = Depends(get_session)):
-    result = await session.scalars(select(UserGoal).order_by(UserGoal.effective_date.desc()))
+    result = await session.scalars(
+        select(UserGoal).order_by(UserGoal.effective_date.desc(), UserGoal.id.desc())
+    )
     return result.all()
 
 
 @router.get("/goals/current", response_model=schemas.UserGoalRead)
 async def get_current_goal(session: AsyncSession = Depends(get_session)):
+    # Tiebreak by id -- effective_date is day-granularity, so multiple
+    # goals saved the same day would otherwise return arbitrarily rather
+    # than the actual most-recent one (real bug, caught in practice).
     goal = await session.scalar(
-        select(UserGoal).order_by(UserGoal.effective_date.desc()).limit(1)
+        select(UserGoal).order_by(UserGoal.effective_date.desc(), UserGoal.id.desc()).limit(1)
     )
     if goal is None:
         raise HTTPException(status_code=404, detail="no goals set yet")

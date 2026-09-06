@@ -24,7 +24,9 @@ scheduler = AsyncIOScheduler()
 
 async def check_weigh_in_reminder() -> None:
     async with async_session() as session:
-        latest = await session.scalar(select(WeighIn).order_by(WeighIn.date.desc()).limit(1))
+        latest = await session.scalar(
+            select(WeighIn).order_by(WeighIn.date.desc(), WeighIn.id.desc()).limit(1)
+        )
         if latest is not None and (date.today() - latest.date).days < WEIGH_IN_REMINDER_DAYS:
             return
         logger.info(

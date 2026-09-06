@@ -101,7 +101,9 @@ async def estimate_tdee(session: AsyncSession) -> TdeeEstimate:
     if profile is None:
         raise ProfileIncomplete("no profile set -- PUT /profile with age/biological_sex/height_cm first")
 
-    latest_weigh_in = await session.scalar(select(WeighIn).order_by(WeighIn.date.desc()).limit(1))
+    latest_weigh_in = await session.scalar(
+        select(WeighIn).order_by(WeighIn.date.desc(), WeighIn.id.desc()).limit(1)
+    )
     if latest_weigh_in is None:
         raise ProfileIncomplete("no weigh-ins logged yet -- BMR needs a current weight")
 
@@ -141,7 +143,9 @@ async def estimate_daily_targets(session: AsyncSession) -> DailyTargets:
     above, not manually entered."""
     tdee_estimate = await estimate_tdee(session)
 
-    goal = await session.scalar(select(UserGoal).order_by(UserGoal.effective_date.desc()).limit(1))
+    goal = await session.scalar(
+        select(UserGoal).order_by(UserGoal.effective_date.desc(), UserGoal.id.desc()).limit(1)
+    )
     deficit = goal.target_deficit_surplus if goal and goal.target_deficit_surplus is not None else Decimal("0")
 
     calorie_target = tdee_estimate.tdee - deficit
