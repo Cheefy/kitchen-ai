@@ -3,6 +3,7 @@ import { renderCalendar } from "./pages/calendar.js";
 import { renderRecipe } from "./pages/recipe.js";
 import { renderSettings } from "./pages/settings.js";
 import { renderInventory } from "./pages/inventory.js";
+import { initVoice } from "./voice.js";
 
 const view = document.getElementById("view");
 const navTabs = document.getElementById("nav-tabs");
@@ -90,3 +91,8 @@ if (document.readyState === "loading") {
 } else {
   scheduleRoute();
 }
+
+// The push-to-talk button lives outside #view, wired up once here rather
+// than per-route, so it's on screen no matter which page the router is
+// currently showing.
+initVoice();

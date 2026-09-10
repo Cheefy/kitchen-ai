@@ -607,3 +607,4 @@ class VoiceToolCallLog(BaseModel):
 class VoiceCommandResult(BaseModel):
     reply: str
     tool_calls: list[VoiceToolCallLog]
+    transcript: str | None = None

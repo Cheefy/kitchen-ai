@@ -4,6 +4,7 @@ sqlalchemy[asyncio]
 asyncpg
 alembic
 httpx
+python-multipart
 garminconnect
 apscheduler
 python-dotenv
